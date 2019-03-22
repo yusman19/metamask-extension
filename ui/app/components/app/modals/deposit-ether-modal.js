@@ -5,6 +5,7 @@ const inherits = require('util').inherits
 const connect = require('react-redux').connect
 const actions = require('../../../store/actions')
 const { getNetworkDisplayName } = require('../../../../../app/scripts/controllers/network/util')
+const createWyreConstructor = require('../../../../lib/wyre')
 const ShapeshiftForm = require('../shapeshift-form')
 
 import Button from '../../ui/button'
@@ -39,6 +40,8 @@ function mapDispatchToProps (dispatch) {
       dispatch(actions.showModal({ name: 'ACCOUNT_DETAILS' }))
     },
     toFaucet: network => dispatch(actions.buyEth({ network })),
+    waitForWyreSigRequest: () => dispatch(actions.waitForWyreSigRequest()),
+    stopWaitingForWyreSigRequest: () => dispatch(actions.stopWaitingForWyreSigRequest()),
   }
 }
 
@@ -123,7 +126,7 @@ DepositEtherModal.prototype.renderRow = function ({
 }
 
 DepositEtherModal.prototype.render = function () {
-  const { network, toCoinbase, address, toFaucet } = this.props
+  const { network, address, toFaucet, waitForWyreSigRequest, stopWaitingForWyreSigRequest } = this.props
   const { buyingWithShapeshift } = this.state
 
   const isTestNetwork = ['3', '4', '42'].find(n => n === network)
@@ -183,7 +186,31 @@ DepositEtherModal.prototype.render = function () {
           title: WYRE_ROW_TITLE,
           text: WYRE_ROW_TEXT,
           buttonLabel: this.context.t('continueToWyre'),
-          onButtonClick: () => toCoinbase(address),
+          onButtonClick: () => {
+            const Wyre = createWyreConstructor()
+            const widget = new Wyre.Widget({
+              env: 'test',
+              accountId: 'AC_YGBPJGZCJ3Z',
+              auth: { type: 'metamask' },
+              operation: {
+                type: 'onramp',
+                destCurrency: 'ETH',
+                dest: `ethereum:${address}`,
+              },
+            })
+
+            widget.open()
+
+            waitForWyreSigRequest()
+
+            widget.on('close', function (e) {
+              stopWaitingForWyreSigRequest()
+            })
+
+            widget.on('complete', function (e) {
+              stopWaitingForWyreSigRequest()
+            })
+          },
           hide: isTestNetwork || buyingWithShapeshift,
         }),
 

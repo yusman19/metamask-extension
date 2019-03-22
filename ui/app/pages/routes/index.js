@@ -6,6 +6,7 @@ import { compose } from 'recompose'
 import actions from '../../store/actions'
 import log from 'loglevel'
 import { getMetaMaskAccounts, getNetworkIdentifier } from '../../selectors/selectors'
+import { matches } from '../../helpers/utils/util'
 
 // init
 import FirstTimeFlow from '../first-time-flow'
@@ -97,6 +98,17 @@ class Routes extends Component {
         })
       }
     })
+  }
+
+  componentDidUpdate (prevProps) {
+    const { waitingForWyreSigRequest, unapprovedPersonalMsgs, stopWaitingForWyreSigRequest, showSigRequestModalForId } = this.props
+
+    const wyreMessage = Object.values(unapprovedPersonalMsgs).find(msg => matches(msg, 'msgParams.origin', /wyre/))
+
+    if (waitingForWyreSigRequest && wyreMessage) {
+      showSigRequestModalForId(wyreMessage.id)
+      stopWaitingForWyreSigRequest()
+    }
   }
 
   renderRoutes () {
@@ -340,6 +352,10 @@ Routes.propTypes = {
   t: PropTypes.func,
   providerId: PropTypes.string,
   providerRequests: PropTypes.array,
+  waitingForWyreSigRequest: PropTypes.bool,
+  unapprovedPersonalMsgs: PropTypes.object,
+  stopWaitingForWyreSigRequest: PropTypes.func,
+  showSigRequestModalForId: PropTypes.func,
 }
 
 function mapStateToProps (state) {
@@ -351,6 +367,7 @@ function mapStateToProps (state) {
     alertMessage,
     isLoading,
     loadingMessage,
+    waitingForWyreSigRequest,
   } = appState
 
   const accounts = getMetaMaskAccounts(state)
@@ -369,6 +386,7 @@ function mapStateToProps (state) {
     unapprovedPersonalMsgCount,
     unapprovedTypedMessagesCount,
     providerRequests,
+    unapprovedPersonalMsgs,
   } = metamask
   const selected = address || Object.keys(accounts)[0]
 
@@ -396,6 +414,7 @@ function mapStateToProps (state) {
     unapprovedMsgCount,
     unapprovedPersonalMsgCount,
     unapprovedTypedMessagesCount,
+    unapprovedPersonalMsgs,
     menuOpen: state.appState.menuOpen,
     network: state.metamask.network,
     provider: state.metamask.provider,
@@ -415,6 +434,7 @@ function mapStateToProps (state) {
     selected,
     keyrings,
     providerRequests,
+    waitingForWyreSigRequest,
   }
 }
 
@@ -427,6 +447,8 @@ function mapDispatchToProps (dispatch, ownProps) {
     setCurrentCurrencyToUSD: () => dispatch(actions.setCurrentCurrency('usd')),
     toggleAccountMenu: () => dispatch(actions.toggleAccountMenu()),
     setMouseUserState: (isMouseUser) => dispatch(actions.setMouseUserState(isMouseUser)),
+    stopWaitingForWyreSigRequest: () => dispatch(actions.stopWaitingForWyreSigRequest()),
+    showSigRequestModalForId: id => dispatch(actions.showModal({ name: 'SIGNATURE_REQUEST', id })),
   }
 }
 
