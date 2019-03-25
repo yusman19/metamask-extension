@@ -14,6 +14,7 @@ module.exports = {
   loadExtension,
   openNewPage,
   switchToWindowWithTitle,
+  switchToWindowWithTitleThatMatches,
   switchToWindowWithUrlThatMatches,
   verboseReportOnFailure,
   waitUntilXWindowHandles,
@@ -117,6 +118,23 @@ async function switchToWindowWithTitle (driver, title, windowHandles) {
     return firstHandle
   } else {
     return await switchToWindowWithTitle(driver, title, windowHandles.slice(1))
+  }
+}
+
+async function switchToWindowWithTitleThatMatches (driver, match, windowHandles) {
+  if (!windowHandles) {
+    windowHandles = await driver.getAllWindowHandles()
+  } else if (windowHandles.length === 0) {
+    throw new Error('No window with title that matches: ' + match)
+  }
+  const firstHandle = windowHandles[0]
+  await driver.switchTo().window(firstHandle)
+  const handleTitle = await driver.getTitle()
+
+  if (handleTitle.match(match)) {
+    return firstHandle
+  } else {
+    return await switchToWindowWithTitleThatMatches(driver, match, windowHandles.slice(1))
   }
 }
 

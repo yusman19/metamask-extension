@@ -19,6 +19,7 @@ const {
   loadExtension,
   openNewPage,
   switchToWindowWithTitle,
+  switchToWindowWithTitleThatMatches,
   verboseReportOnFailure,
   waitUntilXWindowHandles,
 } = require('./helpers')
@@ -1057,10 +1058,13 @@ describe('MetaMask', function () {
 
   describe('Send a custom token from dapp', () => {
     let gasModal
+    let windowHandles
+    let extension
+    let dapp
     it('sends an already created token', async () => {
-      const windowHandles = await driver.getAllWindowHandles()
-      const extension = windowHandles[0]
-      const dapp = await switchToWindowWithTitle(driver, 'E2E Test Dapp', windowHandles)
+      windowHandles = await driver.getAllWindowHandles()
+      extension = windowHandles[0]
+      dapp = await switchToWindowWithTitle(driver, 'E2E Test Dapp', windowHandles)
       await closeAllWindowHandlesExcept(driver, [extension, dapp])
       await delay(regularDelayMs)
 
@@ -1070,15 +1074,12 @@ describe('MetaMask', function () {
       const transferTokens = await findElement(driver, By.xpath(`//button[contains(text(), 'Transfer Tokens')]`))
       await transferTokens.click()
 
-      await closeAllWindowHandlesExcept(driver, [extension, dapp])
-      await driver.switchTo().window(extension)
-      await delay(largeDelayMs)
-
-      await findElements(driver, By.css('.transaction-list__pending-transactions'))
-      const [txListValue] = await findElements(driver, By.css('.transaction-list-item__amount--primary'))
-      await driver.wait(until.elementTextMatches(txListValue, /-7\s*TST/), 10000)
-      await txListValue.click()
       await delay(regularDelayMs)
+      // await closeAllWindowHandlesExcept(driver, [extension, dapp])
+      windowHandles = await driver.getAllWindowHandles()
+      extension = windowHandles[0]
+      await switchToWindowWithTitleThatMatches(driver, 'MetaMask Notification', windowHandles)
+      await delay(largeDelayMs)
 
       // Set the gas limit
       const configureGas = await driver.wait(until.elementLocated(By.css('.confirm-detail-row__header-text--edit')), 10000)
@@ -1124,6 +1125,7 @@ describe('MetaMask', function () {
     it('submits the transaction', async function () {
       const confirmButton = await findElement(driver, By.xpath(`//button[contains(text(), 'Confirm')]`))
       await confirmButton.click()
+      await driver.switchTo().window(extension)
       await delay(regularDelayMs)
     })
 
